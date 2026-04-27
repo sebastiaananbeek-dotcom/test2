@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dekkers Drankjes Spel 🍺</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;700;900&display=swap');
+    :root {
+      --bier:#f5a623; --bier-dark:#c77d00; --rood:#d63031;
+      --groen:#00b894; --donker:#1a1a2e; --donker2:#16213e;
+      --kaart:#0f3460; --wit:#f0f0f0; --geel:#ffd32a;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'Nunito',sans-serif;
+      background:linear-gradient(135deg,var(--donker) 0%,var(--donker2) 100%);
+      min-height:100vh; color:var(--wit);
+      display:flex; flex-direction:column; align-items:center;
+      padding:20px; overflow-x:hidden;
+    }
+    h1 {
+      font-family:'Bangers',cursive; font-size:clamp(2.2rem,8vw,4rem);
+      color:var(--bier); text-align:center; letter-spacing:3px;
+      text-shadow:3px 3px 0 #000,-1px -1px 0 #000; margin-bottom:4px;
+    }
+    .subtitle { font-size:.95rem; color:#aaa; text-align:center; margin-bottom:28px; font-style:italic; }
+
+    /* schermen */
+    .scherm { display:none; width:100%; max-width:540px; animation:fadeIn .4s ease; }
+    .scherm.actief { display:flex; flex-direction:column; align-items:center; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+    /* naam invoer */
+    .naam-grid { display:grid; gap:12px; width:100%; margin-bottom:24px; }
+    .naam-rij {
+      display:flex; align-items:center; background:var(--kaart);
+      border-radius:14px; padding:10px 16px; gap:12px;
+      border:2px solid transparent; transition:border-color .2s;
+    }
+    .naam-rij:focus-within { border-color:var(--bier); }
+    .naam-nummer { font-family:'Bangers',cursive; font-size:1.5rem; color:var(--bier); min-width:28px; }
+    .naam-input {
+      flex:1; background:transparent; border:none; outline:none;
+      font-family:'Nunito',sans-serif; font-size:1.1rem; font-weight:700; color:var(--wit);
+    }
+    .naam-input::placeholder { color:#666; font-weight:400; }
+
+    /* knoppen */
+    .btn {
+      font-family:'Bangers',cursive; font-size:1.6rem; letter-spacing:2px;
+      border:none; border-radius:50px; padding:14px 40px; cursor:pointer;
+      transition:all .15s; margin-top:8px; text-transform:uppercase;
+    }
+    .btn:active { transform:scale(.95); }
+    .btn-bier  { background:var(--bier);  color:#111; box-shadow:0 6px 0 var(--bier-dark); }
+    .btn-bier:hover  { box-shadow:0 8px 0 var(--bier-dark); transform:translateY(-2px); }
+    .btn-groen { background:var(--groen); color:#fff; box-shadow:0 6px 0 #007a65; }
+    .btn-groen:hover { box-shadow:0 8px 0 #007a65; transform:translateY(-2px); }
+    .btn-rood  { background:var(--rood);  color:#fff; box-shadow:0 6px 0 #a02020; }
+    .btn-rood:hover  { box-shadow:0 8px 0 #a02020; transform:translateY(-2px); }
+    .btn-klein { font-size:1rem; padding:10px 24px; margin-top:6px; }
+
+    /* spelersbalk */
+    .spelers-bar { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px; width:100%; }
+    .speler-chip {
+      background:var(--kaart); border-radius:30px; padding:6px 16px;
+      font-size:.9rem; font-weight:700; border:2px solid #333; transition:all .3s;
+    }
+    .speler-chip.actief { border-color:var(--bier); background:var(--bier); color:#111; transform:scale(1.1); }
+
+    /* beker */
+    .wiel-container { position:relative; width:220px; height:220px; margin:10px auto 24px; }
+    .bier-beker {
+      width:220px; height:220px; border-radius:50%;
+      background:conic-gradient(var(--bier) 0deg,var(--bier-dark) 60deg,var(--bier) 120deg,
+        var(--bier-dark) 180deg,var(--bier) 240deg,var(--bier-dark) 300deg,var(--bier) 360deg);
+      display:flex; align-items:center; justify-content:center;
+      font-size:5rem; cursor:pointer;
+      box-shadow:0 0 30px rgba(245,166,35,.4); border:6px solid #fff2; user-select:none;
+    }
+    .bier-beker.draaien { animation:draai .1s linear infinite; }
+    @keyframes draai { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+    /* resultaat */
+    .resultaat-kaart {
+      background:var(--kaart); border-radius:20px; padding:24px;
+      width:100%; text-align:center; border:2px solid var(--bier);
+      margin-bottom:16px; display:none; animation:fadeIn .4s ease;
+    }
+    .resultaat-kaart.zichtbaar { display:block; }
+    .resultaat-naam { font-family:'Bangers',cursive; font-size:2.6rem; color:var(--bier); letter-spacing:2px; }
+    .resultaat-actie { font-size:1.05rem; margin:8px 0 4px; color:#ddd; line-height:1.5; }
+
+    /* muziekkaart */
+    .muziek-kaart {
+      background:linear-gradient(135deg,#1e0a3c,#3a0ca3);
+      border-radius:20px; padding:20px; width:100%;
+      margin-bottom:16px; border:2px solid #7b2d8b;
+      display:none; animation:fadeIn .4s ease;
+    }
+    .muziek-kaart.zichtbaar { display:block; }
+    .muziek-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .muziek-icon { font-size:1.8rem; }
+    .muziek-titel { font-family:'Bangers',cursive; font-size:1.3rem; letter-spacing:1px; color:#d4a0ff; }
+    .drink-uitleg { font-size:.85rem; color:#b8a0d4; margin-bottom:12px; font-style:italic; }
+    .lyric-tekst {
+      font-size:1.1rem; font-style:italic; color:#fff; line-height:1.6;
+      margin-bottom:14px; background:rgba(255,255,255,.08);
+      border-radius:10px; padding:12px 16px; border-left:4px solid #7b2d8b;
+    }
+    .muziek-vraag { font-weight:700; color:#f8c8ff; margin-bottom:14px; font-size:1rem; }
+    .antwoord-knoppen { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+    .antwoord-optie {
+      background:rgba(255,255,255,.1); border:2px solid rgba(255,255,255,.2);
+      border-radius:10px; padding:8px 16px; color:white;
+      font-family:'Nunito',sans-serif; font-weight:700; font-size:.9rem;
+      cursor:pointer; transition:all .2s; flex:1; min-width:130px;
+    }
+    .antwoord-optie:hover:not(:disabled) { background:rgba(255,255,255,.2); border-color:#d4a0ff; }
+    .antwoord-optie.goed { background:var(--groen); border-color:var(--groen); }
+    .antwoord-optie.fout { background:var(--rood);  border-color:var(--rood);  }
+    .antwoord-feedback {
+      display:none; font-size:1rem; margin-top:12px; padding:12px;
+      border-radius:10px; font-weight:700; line-height:1.5;
+    }
+    .antwoord-feedback.goed-fb { background:rgba(0,184,148,.2); color:#00e5a0; border:1px solid var(--groen); }
+    .antwoord-feedback.fout-fb { background:rgba(214,48,49,.2);  color:#ff7675; border:1px solid var(--rood); }
+
+    /* YouTube sectie */
+    .yt-sectie {
+      display:none; margin-top:14px; border-radius:12px; overflow:hidden;
+      border:2px solid #7b2d8b; animation:fadeIn .5s ease;
+    }
+    .yt-sectie.zichtbaar { display:block; }
+    .yt-sectie iframe { width:100%; height:200px; border:none; display:block; }
+    .yt-zoek-btn {
+      display:flex; align-items:center; gap:10px;
+      background:#ff0000; color:#fff; border-radius:10px;
+      padding:12px 18px; text-decoration:none; font-weight:900;
+      font-size:.95rem; transition:background .2s;
+    }
+    .yt-zoek-btn:hover { background:#cc0000; }
+    .yt-zoek-btn svg { flex-shrink:0; }
+
+    /* scorebord */
+    .scorebord { background:var(--kaart); border-radius:16px; padding:16px; width:100%; margin-bottom:16px; }
+    .score-titel { font-family:'Bangers',cursive; font-size:1.3rem; color:var(--bier); margin-bottom:10px; text-align:center; letter-spacing:1px; }
+    .score-rij { display:flex; align-items:center; justify-content:space-between; padding:6px 8px; border-radius:8px; margin-bottom:4px; }
+    .score-rij:nth-child(even) { background:rgba(255,255,255,.05); }
+    .score-naam { font-weight:700; font-size:1rem; }
+    .score-getal { font-family:'Bangers',cursive; font-size:1.4rem; color:var(--bier); min-width:40px; text-align:right; }
+
+    .ronde-info { font-size:.85rem; color:#888; margin-bottom:12px; text-align:center; }
+
+    /* confetti */
+    .confetti-container { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999; }
+    .confetti-piece { position:absolute; border-radius:2px; animation:confettiFall 2s ease-in forwards; }
+    @keyframes confettiFall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+
+    .footer { margin-top:30px; font-size:.75rem; color:#555; text-align:center; }
+    @media(max-width:400px) { .btn{font-size:1.3rem;padding:12px 28px} .resultaat-naam{font-size:2rem} }
+  </style>
+</head>
+<body>
+
+<h1>🍺 Dekkers Drankjes Spel 🍺</h1>
+<p class="subtitle">Gezellig zuipen met een muzikaal tintje</p>
+
+<!-- SCHERM 1: NAMEN -->
+<div id="scherm-namen" class="scherm actief">
+  <div class="naam-grid" id="naam-grid"></div>
+  <button class="btn btn-bier" onclick="startSpel()">🎉 Spel Starten!</button>
+</div>
+
+<!-- SCHERM 2: SPELEN -->
+<div id="scherm-spelen" class="scherm">
+  <div class="spelers-bar" id="spelers-bar"></div>
+  <div class="ronde-info" id="ronde-info">Druk op de beker om te draaien!</div>
+
+  <div class="wiel-container">
+    <div class="bier-beker" id="bier-beker" onclick="draaiWiel()">🍺</div>
+  </div>
+
+  <div class="resultaat-kaart" id="resultaat-kaart">
+    <div class="resultaat-naam" id="resultaat-naam"></div>
+    <div class="resultaat-actie" id="resultaat-actie"></div>
+  </div>
+
+  <div class="muziek-kaart" id="muziek-kaart">
+    <div class="muziek-header">
+      <span class="muziek-icon">🎵</span>
+      <span class="muziek-titel">Nederlandstalig Noten Rondje!</span>
+    </div>
+    <p class="drink-uitleg">✅ Goed = niet drinken &nbsp;|&nbsp; ❌ Fout = 5 slokken!</p>
+    <p class="lyric-tekst" id="lyric-tekst"></p>
+    <p class="muziek-vraag" id="muziek-vraag"></p>
+    <div class="antwoord-knoppen" id="antwoord-knoppen"></div>
+    <div class="antwoord-feedback" id="antwoord-feedback"></div>
+    <div class="yt-sectie" id="yt-sectie"></div>
+  </div>
+
+  <div class="scorebord">
+    <div class="score-titel">🏆 Drinkscoreboard</div>
+    <div id="score-lijst"></div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-groen btn-klein" onclick="draaiWiel()" id="btn-volgende">🍺 Volgende Ronde</button>
+    <button class="btn btn-rood btn-klein" onclick="resetSpel()">🔄 Opnieuw</button>
+  </div>
+</div>
+
+<div class="confetti-container" id="confetti"></div>
+<div class="footer">Dekkers Drankjes Spel — Drink verantwoord! 🍺</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  AUDIO ENGINE
+// ══════════════════════════════════════════════
+let audioCtx = null;
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTick(when, volume = 0.18) {
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const g   = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.value = 900;
+  g.gain.setValueAtTime(0, when);
+  g.gain.linearRampToValueAtTime(volume, when + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.001, when + 0.055);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(when); osc.stop(when + 0.06);
+}
+
+function playSpinTicks(totalMs) {
+  const ctx  = getCtx();
+  const now  = ctx.currentTime;
+  const dur  = totalMs / 1000;
+  let t = 0, iv = 0.085;
+  while (t < dur) {
+    playTick(now + t, t < dur * 0.15 ? 0.1 + (t / (dur * 0.15)) * 0.1 : 0.2);
+    const prog = t / dur;
+    if (prog < 0.25)      iv = Math.max(0.042, iv - 0.004);
+    else if (prog > 0.55) iv = Math.min(0.38,  iv + 0.018);
+    t += iv;
+  }
+  // Final heavier tick at end
+  playTick(now + dur - 0.05, 0.3);
+}
+
+function playToeter() {
+  // Buzzer: laag sawtooth
+  const ctx = getCtx();
+  [0, 0.05, 0.1].forEach(delay => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(160, ctx.currentTime + delay);
+    osc.frequency.linearRampToValueAtTime(80, ctx.currentTime + delay + 0.7);
+    g.gain.setValueAtTime(0.4, ctx.currentTime + delay);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.8);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + 0.85);
+  });
+}
+
+function playJammer() {
+  // Sad trombone: Bb4 → Ab4 → G4 → F4 met glide
+  const ctx   = getCtx();
+  const notes = [466.16, 415.30, 391.99, 349.23];
+  let t = ctx.currentTime;
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, t);
+    if (i < notes.length - 1) {
+      osc.frequency.linearRampToValueAtTime(notes[i+1], t + 0.38);
+    }
+    g.gain.setValueAtTime(0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.5);
+    t += 0.33;
+  });
+}
+
+// ══════════════════════════════════════════════
+//  MUZIEK DATA
+//  yt: { id: "YOUTUBE_ID" }  →  direct embed
+//  yt: { search: "query"  }  →  YouTube zoeklink
+// ══════════════════════════════════════════════
+const MUZIEK_NORMAAL = [
+  {
+    artiest: "André Hazes",
+    titel:   "Zij gelooft in mij",
+    lyric:   "Zij gelooft in mij, al ben ik soms niet perfect...",
+    vraag:   "Van wie is dit iconische Nederlandstalige nummer?",
+    opties:  ["André Hazes", "Marco Borsato", "Volumia!", "Frans Bauer"],
+    goed:    "André Hazes",
+    yt: { search: "André Hazes Zij gelooft in mij" }
+  },
+  {
+    artiest: "Marco Borsato & Sita",
+    titel:   "Lopen op het water",
+    lyric:   "Samen lopen op het water, mijn hand in jouw hand...",
+    vraag:   "Dit koningslied werd gemaakt voor het huwelijk van Willem-Alexander. Van wie?",
+    opties:  ["Gordon", "Trijntje Oosterhuis", "Marco Borsato & Sita", "Jan Smit"],
+    goed:    "Marco Borsato & Sita",
+    yt: { search: "Marco Borsato Sita Lopen op het water officieel" }
+  },
+  {
+    artiest: "Guus Meeuwis",
+    titel:   "Brabant",
+    lyric:   "Dan voel ik dat ik thuiskom, in dit mooie land...",
+    vraag:   "Dit regionale volkslied is van?",
+    opties:  ["Frans Bauer", "Guus Meeuwis", "Jan Smit", "Gerard Joling"],
+    goed:    "Guus Meeuwis",
+    yt: { id: "myPDjxPeAms" }
+  },
+  {
+    artiest: "BZN",
+    titel:   "Mon Amour",
+    lyric:   "Mon amour, mon amour, blijf toch bij mij...",
+    vraag:   "Dit was de doorbraakhit van welke Volendamse band?",
+    opties:  ["Doe Maar", "BZN", "De Dijk", "Blof"],
+    goed:    "BZN",
+    yt: { search: "BZN Mon Amour officieel" }
+  },
+  {
+    artiest: "Doe Maar",
+    titel:   "Zaterdag",
+    lyric:   "Zaterdag, die dag gaat voorbij, morgen is het zondag...",
+    vraag:   "Welke Nederlandstalige punk/ska band scoorde hiermee?",
+    opties:  ["Doe Maar", "Het Goede Doel", "Normaal", "Acda en De Munnik"],
+    goed:    "Doe Maar",
+    yt: { search: "Doe Maar Zaterdag officieel" }
+  },
+  {
+    artiest: "Frans Bauer",
+    titel:   "Heb je even voor mij",
+    lyric:   "Heb je even voor mij, ik wil je graag iets vertellen...",
+    vraag:   "Dit nummer van welke artiest stond 7 weken op nummer 1?",
+    opties:  ["Jan Smit", "Frans Bauer", "Lee Towers", "Danny de Munk"],
+    goed:    "Frans Bauer",
+    yt: { search: "Frans Bauer Heb je even voor mij officieel" }
+  },
+  {
+    artiest: "Anouk",
+    titel:   "Nobody's Wife",
+    lyric:   "I'm nobody's wife, I'm nobody's baby...",
+    vraag:   "Dit Nederlandstalige rockicoon brak hiermee door in 1997. Wie?",
+    opties:  ["Anouk", "Ilse DeLange", "Di-rect", "Kane"],
+    goed:    "Anouk",
+    yt: { search: "Anouk Nobody's Wife official video 1997" }
+  },
+  {
+    artiest: "Nick & Simon",
+    titel:   "Rosanne",
+    lyric:   "Rosanne, neem me aan, zoals ik ben...",
+    vraag:   "Van welk Nederlandstalig duo?",
+    opties:  ["Paskal & Fidel", "Nick & Simon", "Jan & Arjan", "Peter & Joyce"],
+    goed:    "Nick & Simon",
+    yt: { id: "5o0vFWBsMe0" }
+  },
+  {
+    artiest: "BLØF ft. Geike Arnaert",
+    titel:   "Zoutelande",
+    lyric:   "En als jij lacht, staat alles stil...",
+    vraag:   "Welke Zeelandse band scoorde hiermee een megahit met Belgische zangeres?",
+    opties:  ["Blof ft. Geike", "Di-rect ft. Lisa", "Racoon", "Volumia!"],
+    goed:    "Blof ft. Geike",
+    yt: { search: "Blof Geike Zoutelande officieel" }
+  },
+  {
+    artiest: "Volumia!",
+    titel:   "Afscheid nemen bestaat niet",
+    lyric:   "Afscheid nemen bestaat niet, zolang je aan mij denkt...",
+    vraag:   "Deze Nederlandstalige band had dit als hun absolute doorbraak. Wie?",
+    opties:  ["Volumia!", "Kane", "Racoon", "Di-rect"],
+    goed:    "Volumia!",
+    yt: { search: "Volumia Afscheid nemen bestaat niet" }
+  },
+  {
+    artiest: "Gordon",
+    titel:   "Geef mij maar Amsterdam",
+    lyric:   "Geef mij maar Amsterdam, dat is de stad van mijn dromen...",
+    vraag:   "Welke flamboyante Nederlandse artiest zong dit?",
+    opties:  ["Gordon", "Gerard Joling", "Lee Towers", "Glennis Grace"],
+    goed:    "Gordon",
+    yt: { search: "Gordon Geef mij maar Amsterdam officieel" }
+  },
+  {
+    artiest: "Normaal",
+    titel:   "Daoaraans",
+    lyric:   "Daoaraans, daoaraans, zo doen ze dat in Gelderlaaand!",
+    vraag:   "Dit ultra-regionale nummer is van welke Gelderse band?",
+    opties:  ["Normaal", "Rowwen Hèze", "Heideroosjes", "Doe Maar"],
+    goed:    "Normaal",
+    yt: { search: "Normaal Daoaraans officieel" }
+  },
+  {
+    artiest: "Kinderen voor Kinderen",
+    titel:   "Pff",
+    lyric:   "Pff, het is zo warm vandaag, ik wil niet naar school...",
+    vraag:   "Van welk beroemd Nederlands kinderkoor/project?",
+    opties:  ["Kinderen voor Kinderen", "Het Klokhuis", "Villa Achterwerk", "Sesamstraat"],
+    goed:    "Kinderen voor Kinderen",
+    yt: { search: "Kinderen voor Kinderen Pff officieel" }
+  },
+  {
+    artiest: "Jan Smit",
+    titel:   "Als de morgen is gekomen",
+    lyric:   "Als de morgen is gekomen, dan ben jij er weer voor mij...",
+    vraag:   "Welke jonge Volendam-zanger scoorde hiermee zijn eerste hit?",
+    opties:  ["Jan Smit", "Danny de Munk", "Nick Schilder", "Paskal Jakobsen"],
+    goed:    "Jan Smit",
+    yt: { search: "Jan Smit Als de morgen is gekomen officieel" }
+  },
+  {
+    artiest: "De Dijk",
+    titel:   "Zeg me dat het niet zo is",
+    lyric:   "Zeg me dat het niet zo is, zeg me dat je nog van mij houdt...",
+    vraag:   "Van welke Amsterdamse bluesrockband?",
+    opties:  ["De Dijk", "Blof", "Heideroosjes", "Golden Earring"],
+    goed:    "De Dijk",
+    yt: { search: "De Dijk Zeg me dat het niet zo is" }
+  }
+];
+
+// Onmogelijke vragen voor Gerben/MJ — antwoord altijd fout want ze worden geript
+const MUZIEK_ONMOGELIJK = [
+  {
+    artiest: "Boudewijn de Groot",
+    titel:   "Welterusten meneer de President",
+    lyric:   "Welterusten, meneer de president, slaap maar rustig...",
+    vraag:   "Dit protestlied uit 1966 is van welke chansonnier?",
+    opties:  ["Wim Sonneveld", "Boudewijn de Groot", "Toon Hermans", "Drs. P"],
+    goed:    "Boudewijn de Groot",
+    yt: { search: "Boudewijn de Groot Welterusten meneer de President" }
+  },
+  {
+    artiest: "Drs. P",
+    titel:   "Ik ben zo eenzaam zonder jou",
+    lyric:   "Als ik alleen zit in de kamer, dan denk ik aan jou...",
+    vraag:   "Van welke Nederlandse absurdistische dichter/cabaretier?",
+    opties:  ["Wim de Bie", "Drs. P", "Seth Gaaikema", "Freek de Jonge"],
+    goed:    "Drs. P",
+    yt: { search: "Drs P Ik ben zo eenzaam zonder jou" }
+  },
+  {
+    artiest: "Jasperina de Jong",
+    titel:   "Als een engel",
+    lyric:   "Als een engel zweef ik over de wolken, zo ver weg...",
+    vraag:   "Dit is een B-kant van welke vergeten Nederlandse artieste uit 1969?",
+    opties:  ["Rita Hovink", "Jasperina de Jong", "Liesbeth List", "Will Tura"],
+    goed:    "Jasperina de Jong",
+    yt: { search: "Jasperina de Jong Nederland 1969" }
+  },
+  {
+    artiest: "Toontje Lager",
+    titel:   "Houd je vast",
+    lyric:   "Houd je vast, het wordt een wilde rit, door de nacht...",
+    vraag:   "Van welke obscure vroeg-80s Haagse band is dit de b-kant?",
+    opties:  ["Klein Orkest", "Toontje Lager", "Bots", "Noodweer"],
+    goed:    "Toontje Lager",
+    yt: { search: "Toontje Lager Houd je vast" }
+  },
+  {
+    artiest: "Armand",
+    titel:   "Ben ik te min",
+    lyric:   "Ben ik te min voor jou, zeg me dan waarom...",
+    vraag:   "Dit is van welke vergeten Amsterdamse singer-songwriter uit 1971?",
+    opties:  ["Bots", "Armand", "Boudewijn de Groot", "Rob de Nijs"],
+    goed:    "Armand",
+    yt: { search: "Armand Ben ik te min Nederland 1971" }
+  },
+  {
+    artiest: "Connie Vanderlinden",
+    titel:   "Slaap maar",
+    lyric:   "Slaap maar, slaap maar, morgen is er weer een dag...",
+    vraag:   "Welke volledig vergeten Nederlandse artieste zong dit in 1963?",
+    opties:  ["Connie Vanderlinden", "Rita Hovink", "Willeke Alberti", "Corry Konings"],
+    goed:    "Connie Vanderlinden",
+    yt: { search: "Connie Vanderlinden Nederlandse muziek" }
+  },
+  {
+    artiest: "Herman van Veen",
+    titel:   "Speelman",
+    lyric:   "Speel maar, speel maar, speelman, voor het volk...",
+    vraag:   "Dit is een obscure albumtrack (geen single!) van welke Nederlandse artiest?",
+    opties:  ["Wim Sonneveld", "Herman van Veen", "Rob de Nijs", "Freek de Jonge"],
+    goed:    "Herman van Veen",
+    yt: { search: "Herman van Veen Speelman" }
+  },
+  {
+    artiest: "Bots",
+    titel:   "Friese wind",
+    lyric:   "De Friese wind waait koud over de klei, en ik sta hier alleen...",
+    vraag:   "Van welke politieke Nederlandstalige band uit Friesland?",
+    opties:  ["Bots", "Fluitsma & Van Tijn", "De Kast", "Rowwen Hèze"],
+    goed:    "Bots",
+    yt: { search: "Bots Friese wind" }
+  },
+  {
+    artiest: "Liesbeth List",
+    titel:   "De smaak van aardbeien",
+    lyric:   "De smaak van aardbeien, dat is de smaak van jou...",
+    vraag:   "Van welke klassieke Nederlandse chansonnière?",
+    opties:  ["Liesbeth List", "Ria Valk", "Willeke Alberti", "Wanda Jakubowska"],
+    goed:    "Liesbeth List",
+    yt: { search: "Liesbeth List De smaak van aardbeien" }
+  },
+  {
+    artiest: "Rob de Nijs",
+    titel:   "Malle Babbe",
+    lyric:   "Malle Babbe zit in de kroeg, en drinkt haar glas leeg...",
+    vraag:   "Dit klassiek nummer is van welke Nederlandse artiest?",
+    opties:  ["Rob de Nijs", "Wim Sonneveld", "Johnny Jordaan", "Louis Davids"],
+    goed:    "Rob de Nijs",
+    yt: { search: "Rob de Nijs Malle Babbe" }
+  }
+];
+
+// ══════════════════════════════════════════════
+//  SPELSTATUS
+// ══════════════════════════════════════════════
+let spelers = [], scores = {}, slokken = {}, ronde = 0, bezig = false;
+let huidigeMuziek = null, huidigePersoon = null;
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function isSpeciaal(naam) {
+  if (!naam) return false;
+  const n = naam.trim().toLowerCase().replace(/[\s\-]/g,'');
+  return ['gerben','m','mj','markjan'].includes(n);
+}
+function bouwGewogenLijst(sp) {
+  const lst = [];
+  sp.forEach(s => { const n = isSpeciaal(s)?16:10; for(let i=0;i<n;i++) lst.push(s); });
+  return lst;
+}
+function rnd(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+// ══════════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════════
+function bouwNaamGrid() {
+  const g = document.getElementById('naam-grid');
+  g.innerHTML = '';
+  for (let i=1;i<=5;i++) {
+    const r = document.createElement('div');
+    r.className = 'naam-rij';
+    r.innerHTML = `<span class="naam-nummer">${i}</span>
+      <input class="naam-input" id="naam-${i}" type="text" placeholder="Naam speler ${i}..."/>`;
+    g.appendChild(r);
+  }
+}
+
+function startSpel() {
+  const gevonden = [];
+  for (let i=1;i<=5;i++) {
+    const n = document.getElementById(`naam-${i}`).value.trim();
+    if (n) gevonden.push(n);
+  }
+  if (gevonden.length < 2) { alert("Voer minimaal 2 namen in!"); return; }
+  spelers = gevonden;
+  scores  = {}; slokken = {}; ronde = 0;
+  spelers.forEach(s => { scores[s]=0; slokken[s]=0; });
+  toonScherm('scherm-spelen');
+  bouwSpelersBar();
+  updateScoreBord();
+  document.getElementById('resultaat-kaart').classList.remove('zichtbaar');
+  document.getElementById('muziek-kaart').classList.remove('zichtbaar');
+  document.getElementById('ronde-info').textContent = 'Druk op de beker om te draaien!';
+}
+
+function toonScherm(id) {
+  document.querySelectorAll('.scherm').forEach(s=>s.classList.remove('actief'));
+  document.getElementById(id).classList.add('actief');
+}
+
+function bouwSpelersBar() {
+  document.getElementById('spelers-bar').innerHTML = spelers.map(s =>
+    `<div class="speler-chip" id="chip-${s.replace(/\s/g,'_')}">${s}</div>`
+  ).join('');
+}
+
+function updateSpelersBar(actieve) {
+  spelers.forEach(s => {
+    const c = document.getElementById('chip-'+s.replace(/\s/g,'_'));
+    if (c) c.classList.toggle('actief', s===actieve);
+  });
+}
+
+function updateScoreBord() {
+  const gesorteerd = [...spelers].sort((a,b)=>slokken[b]-slokken[a]);
+  document.getElementById('score-lijst').innerHTML = gesorteerd.map((s,i) => {
+    const m = i===0?'🥇':i===1?'🥈':i===2?'🥉':'🍺';
+    return `<div class="score-rij"><span class="score-naam">${m} ${s}</span><span class="score-getal">${slokken[s]} slk</span></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  DRAAIEN
+// ══════════════════════════════════════════════
+function draaiWiel() {
+  if (bezig) return;
+  bezig = true;
+  const beker = document.getElementById('bier-beker');
+  document.getElementById('btn-volgende').disabled = true;
+  document.getElementById('resultaat-kaart').classList.remove('zichtbaar');
+  document.getElementById('muziek-kaart').classList.remove('zichtbaar');
+  document.getElementById('yt-sectie').classList.remove('zichtbaar');
+  document.getElementById('yt-sectie').innerHTML = '';
+  document.getElementById('antwoord-feedback').style.display = 'none';
+
+  beker.classList.add('draaien');
+  const spinDuur = 1600 + Math.random() * 1400;
+  playSpinTicks(spinDuur);
+
+  setTimeout(() => {
+    beker.classList.remove('draaien');
+    ronde++;
+    document.getElementById('ronde-info').textContent = `Ronde ${ronde}`;
+
+    const gewogen     = bouwGewogenLijst(spelers);
+    const gekozen     = rnd(gewogen);
+    huidigePersoon    = gekozen;
+    scores[gekozen]++;
+    updateSpelersBar(gekozen);
+
+    document.getElementById('resultaat-naam').textContent = gekozen.toUpperCase() + ' 🍺';
+    document.getElementById('resultaat-actie').textContent =
+      'Raad het nummer → niet drinken 🙌\nFout → 5 slokken! 😬';
+    document.getElementById('resultaat-kaart').classList.add('zichtbaar');
+
+    laadMuziek(gekozen);
+    beker.textContent = '🍺';
+    document.getElementById('btn-volgende').disabled = false;
+    bezig = false;
+  }, spinDuur);
+}
+
+// ══════════════════════════════════════════════
+//  MUZIEK RONDE
+// ══════════════════════════════════════════════
+function laadMuziek(speler) {
+  const pool = isSpeciaal(speler) ? MUZIEK_ONMOGELIJK : MUZIEK_NORMAAL;
+  huidigeMuziek = rnd(pool);
+
+  document.getElementById('lyric-tekst').innerHTML = `"${huidigeMuziek.lyric}"`;
+  document.getElementById('muziek-vraag').textContent = huidigeMuziek.vraag;
+
+  const opties = [...huidigeMuziek.opties].sort(() => Math.random() - 0.5);
+  document.getElementById('antwoord-knoppen').innerHTML = opties.map(o =>
+    `<button class="antwoord-optie" onclick="controleerAntwoord('${o.replace(/'/g,"\\'")}',this)">${o}</button>`
+  ).join('');
+
+  document.getElementById('antwoord-feedback').style.display = 'none';
+  document.getElementById('yt-sectie').classList.remove('zichtbaar');
+  document.getElementById('yt-sectie').innerHTML = '';
+  document.getElementById('muziek-kaart').classList.add('zichtbaar');
+}
+
+function controleerAntwoord(optie, btn) {
+  document.querySelectorAll('.antwoord-optie').forEach(b => b.disabled = true);
+
+  const speciaal  = isSpeciaal(huidigePersoon);
+  const echteGoed = huidigeMuziek.goed;
+  const isGoed    = speciaal ? false : (optie === echteGoed);
+
+  const feedback = document.getElementById('antwoord-feedback');
+  btn.classList.add(isGoed ? 'goed' : 'fout');
+  if (!isGoed) {
+    document.querySelectorAll('.antwoord-optie').forEach(b => {
+      if (b.textContent.trim() === echteGoed) b.classList.add('goed');
+    });
+  }
+
+  if (isGoed) {
+    playJammer();   // correct = jammer voor de rest 😢
+    feedback.textContent = `✅ Correct! "${huidigeMuziek.artiest} – ${huidigeMuziek.titel}". Je hoeft NIET te drinken! 🙌`;
+    feedback.className   = 'antwoord-feedback goed-fb';
+  } else {
+    playToeter();   // fout = toeeeeter 📯
+    const spot = speciaal ? rnd([
+      `❌ Echt niet goed! Het was "${huidigeMuziek.artiest}". 5 slokken, nu! 🍻`,
+      `❌ Haha nope! "${huidigeMuziek.artiest}" — 5 slokken! 😂`,
+      `❌ Mis! Alsof jij dat weet... "${huidigeMuziek.artiest}". 5 slokken! 😈`,
+      `❌ Nope! "${huidigeMuziek.artiest}" — cheers op jouw 5 slokken! 🥂`,
+      `❌ Echt fout! "${huidigeMuziek.artiest}" was het. Bek dicht, drinken! 🍺🍺🍺🍺🍺`,
+    ]) : `❌ Helaas! Het was "${huidigeMuziek.artiest} – ${huidigeMuziek.titel}". Drink 5 slokken! 🍺`;
+    feedback.textContent = spot;
+    feedback.className   = 'antwoord-feedback fout-fb';
+    slokken[huidigePersoon] = (slokken[huidigePersoon]||0) + 5;
+    updateScoreBord();
+    schietConfetti('rood');
+  }
+  feedback.style.display = 'block';
+
+  // YouTube tonen
+  setTimeout(() => toonYoutube(huidigeMuziek), 400);
+}
+
+// ══════════════════════════════════════════════
+//  YOUTUBE
+// ══════════════════════════════════════════════
+function toonYoutube(muziek) {
+  const sectie = document.getElementById('yt-sectie');
+  sectie.innerHTML = '';
+
+  if (muziek.yt.id) {
+    // Direct embed — autoplay, start na antwoord
+    sectie.innerHTML = `
+      <iframe
+        src="https://www.youtube-nocookie.com/embed/${muziek.yt.id}?autoplay=1&rel=0&modestbranding=1"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>`;
+  } else {
+    // Zoekknop naar YouTube
+    const q = encodeURIComponent(muziek.yt.search);
+    sectie.innerHTML = `
+      <a class="yt-zoek-btn" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+          <path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.7 5 12 5 12 5s-4.7 0-7 .1c-.4.1-1.3.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.5c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.8 2.2.8C6.8 19 12 19 12 19s4.7 0 7-.2c.4-.1 1.3-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.5C22 9.6 21.8 8 21.8 8zM9.7 14.5V9l5.3 2.8-5.3 2.7z"/>
+        </svg>
+        ▶ ${muziek.artiest} — ${muziek.titel}
+      </a>`;
+  }
+  sectie.classList.add('zichtbaar');
+}
+
+// ══════════════════════════════════════════════
+//  CONFETTI
+// ══════════════════════════════════════════════
+function schietConfetti(kleur) {
+  const container = document.getElementById('confetti');
+  const kleuren = kleur==='rood'
+    ? ['#d63031','#ff7675','#fdcb6e','#e17055']
+    : ['#f5a623','#ffd32a','#00b894','#7b2d8b','#fff'];
+  for (let i=0;i<35;i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'confetti-piece';
+      p.style.cssText = `left:${Math.random()*100}%;top:-10px;background:${rnd(kleuren)};
+        width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;
+        animation-delay:${Math.random()*.4}s;animation-duration:${1.5+Math.random()}s;`;
+      container.appendChild(p);
+      setTimeout(() => p.remove(), 2500);
+    }, i*40);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RESET
+// ══════════════════════════════════════════════
+function resetSpel() {
+  spelers=[]; scores={}; slokken={}; ronde=0;
+  toonScherm('scherm-namen');
+  bouwNaamGrid();
+}
+
+// INIT
+bouwNaamGrid();
+</script>
+</body>
+</html>
